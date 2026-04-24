@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASEAN Economic Monitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;font-size:14px}
+  .topbar{background:#fff;border-bottom:1px solid #e5e5e5;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:100}
+  .logo{font-size:16px;font-weight:600;color:#185FA5}
+  .logo span{font-weight:400;color:#888;margin-left:6px;font-size:13px}
+  .topbar-right{display:flex;align-items:center;gap:10px}
+  .month-badge{font-size:12px;padding:5px 12px;border-radius:6px;background:#E6F1FB;color:#0C447C;font-weight:500}
+  .last-updated{font-size:12px;color:#888}
+  .loading{text-align:center;padding:80px 24px;color:#888;font-size:15px}
+  .error-box{background:#FCEBEB;color:#791F1F;border:1px solid #F7C1C1;border-radius:8px;padding:16px 20px;margin:24px;font-size:13px;line-height:1.6}
+  .container{max-width:1200px;margin:0 auto;padding:24px}
+
+  .nav-tabs{display:flex;gap:2px;background:#fff;border:1px solid #e5e5e5;border-radius:8px;padding:4px;margin-bottom:24px;flex-wrap:wrap}
+  .ntab{padding:7px 16px;font-size:13px;cursor:pointer;color:#666;border-radius:6px;border:none;background:transparent;transition:all 0.15s}
+  .ntab:hover{background:#f0f0f0;color:#1a1a1a}
+  .ntab.active{background:#185FA5;color:#fff;font-weight:500}
+
+  .panel{display:none}.panel.vis{display:block}
+
+  .overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+  .ov-card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:16px;cursor:pointer;transition:border-color 0.15s}
+  .ov-card:hover{border-color:#185FA5}
+  .ov-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .ov-name{font-size:14px;font-weight:600}
+  .sent-pill{font-size:11px;padding:3px 9px;border-radius:10px;font-weight:500}
+  .sp{background:#EAF3DE;color:#27500A}.sc{background:#FAEEDA;color:#633806}.sn{background:#FCEBEB;color:#791F1F}
+  .ov-hfis{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .oh{background:#f8f8f6;border-radius:6px;padding:9px 10px}
+  .oh-lbl{font-size:10px;color:#888;margin-bottom:2px;line-height:1.3}
+  .oh-val{font-size:15px;font-weight:600;color:#1a1a1a}
+  .oh-unit{font-size:10px;color:#888}
+  .oh-chg{font-size:11px;margin-top:2px}
+  .up{color:#3B6D11}.dn{color:#A32D2D}.fl{color:#888}
+  .view-btn{margin-top:12px;width:100%;font-size:12px;padding:7px;border-radius:6px;border:1px solid #e5e5e5;background:transparent;color:#666;cursor:pointer;transition:all 0.15s}
+  .view-btn:hover{background:#185FA5;color:#fff;border-color:#185FA5}
+
+  .country-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  @media(max-width:700px){.country-layout{grid-template-columns:1fr}.chart-row{grid-template-columns:1fr!important}.ov-hfis{grid-template-columns:repeat(2,1fr)}}
+  .card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:16px}
+  .card-title{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:12px}
+  .card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .summary-text{font-size:13px;color:#333;line-height:1.75}
+  .hfi9{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .hc{background:#f8f8f6;border-radius:6px;padding:10px}
+  .hc-lbl{font-size:10px;color:#888;margin-bottom:3px;line-height:1.3}
+  .hc-val{font-size:17px;font-weight:600;color:#1a1a1a}
+  .hc-unit{font-size:10px;color:#888}
+  .hc-chg{font-size:11px;margin-top:3px}
+  .q-note{font-size:10px;color:#aaa;font-style:italic}
+
+  .chart-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .chart-card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:16px}
+  .chart-lbl{font-size:12px;color:#888;margin-bottom:12px}
+  .chart-wrap{position:relative;height:160px}
+
+  .heatmap-card{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:16px;margin-bottom:16px;overflow-x:auto}
+  .hm-grid{display:grid;gap:4px;min-width:580px}
+  .hm-cell{border-radius:4px;padding:7px 4px;text-align:center;font-size:12px;font-weight:500}
+  .hm-lbl{font-size:11px;color:#666;padding:7px 4px;display:flex;align-items:center;white-space:nowrap}
+  .hm-head{font-size:11px;font-weight:600;color:#888;padding:4px;text-align:center}
+  .hm-g{background:#EAF3DE;color:#27500A}
+  .hm-a{background:#FAEEDA;color:#633806}
+  .hm-r{background:#FCEBEB;color:#791F1F}
+  .hm-n{background:#f0f0f0;color:#888}
+
+  .setup-box{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:24px;margin-bottom:16px}
+  .setup-box h2{font-size:16px;font-weight:600;margin-bottom:8px}
+  .setup-box p{font-size:13px;color:#555;line-height:1.7;margin-bottom:12px}
+  .setup-box code{background:#f0f0f0;padding:2px 7px;border-radius:4px;font-family:monospace;font-size:13px}
+  .setup-box input{width:100%;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;margin-bottom:8px}
+  .setup-box button{padding:9px 20px;background:#185FA5;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer}
+  .setup-box button:hover{background:#0C447C}
+  .step{display:flex;gap:12px;margin-bottom:14px;font-size:13px;color:#333;line-height:1.6}
+  .step-num{min-width:24px;height:24px;border-radius:50%;background:#185FA5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;margin-top:1px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="logo">ASEAN Economic Monitor <span>Internal use · Tier 1 indicators</span></div>
+  </div>
+  <div class="topbar-right">
+    <div class="last-updated" id="lastUpdated"></div>
+    <div class="month-badge" id="monthBadge">Loading...</div>
+  </div>
+</div>
+
+<div id="setupScreen" style="max-width:700px;margin:40px auto;padding:0 24px">
+  <div class="setup-box">
+    <h2>Connect your Google Sheet</h2>
+    <p>Paste your Google Sheet CSV export URL below to load the dashboard. You only need to do this once — the URL will be saved in your browser.</p>
+    <div class="step"><div class="step-num">1</div><div>Open your Google Sheet → <strong>File → Share → Publish to web</strong></div></div>
+    <div class="step"><div class="step-num">2</div><div>Select the sheet tab, choose <strong>Comma-separated values (.csv)</strong>, click <strong>Publish</strong></div></div>
+    <div class="step"><div class="step-num">3</div><div>Copy the URL and paste it below</div></div>
+    <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv" />
+    <button onclick="saveAndLoad()">Connect &amp; Load Dashboard</button>
+    <p style="margin-top:12px;margin-bottom:0;font-size:12px;color:#aaa">Don't have the sheet yet? Download the template below, fill it in, upload to Google Sheets, then come back here.</p>
+  </div>
+  <div class="setup-box">
+    <h2>Download data template</h2>
+    <p>Use this CSV template to structure your data correctly. Open it in Excel, fill in the monthly figures, then upload to Google Sheets.</p>
+    <button onclick="downloadTemplate()">Download CSV template</button>
+  </div>
+</div>
+
+<div id="mainDash" style="display:none">
+  <div class="container">
+    <div class="nav-tabs" id="navTabs">
+      <button class="ntab active" data-panel="overview">Regional overview</button>
+      <button class="ntab" data-panel="heatmap">Heatmap</button>
+    </div>
+
+    <div class="panel vis" id="panel-overview"><div class="overview-grid" id="ovGrid"></div></div>
+    <div class="panel" id="panel-heatmap">
+      <div class="heatmap-card">
+        <div class="card-title">Indicator heatmap — all economies</div>
+        <div id="hmGrid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loadingScreen" class="loading" style="display:none">Loading dashboard data...</div>
+
+<script>
+const COUNTRIES_ORDER = ["Malaysia","Singapore","Indonesia","Thailand","Philippines","Vietnam"];
+const COUNTRY_IDS = {"Malaysia":"my","Singapore":"sg","Indonesia":"id","Thailand":"th","Philippines":"ph","Vietnam":"vn"};
+const HFI_KEYS = ["gdp","ip","cpi","rate","exports","trade","fx","reserves","pmi"];
+const HFI_LABELS = ["GDP growth","Industrial prod.","Headline CPI","Policy rate","Exports growth","Trade balance","FX (vs USD)","Forex reserves","Mfg. PMI"];
+const HFI_UNITS = {gdp:"%YoY",ip:"%YoY",cpi:"%YoY",rate:"%",exports:"%YoY",trade:"USD bn",fx:"",reserves:"USD bn",pmi:""};
+
+let DASH_DATA = {};
+let activeCharts = {};
+
+function dirCls(d){return d==="up"?"up":d==="down"?"dn":"fl"}
+function dirArrow(d){return d==="up"?"▲ ":d==="down"?"▼ ":""}
+function sentCls(s){return s==="positive"?"sp":s==="cautious"?"sc":"sn"}
+function sentLbl(s){return s==="positive"?"Positive":s==="cautious"?"Cautious":"Negative"}
+
+function saveAndLoad(){
+  const url = document.getElementById("sheetUrl").value.trim();
+  if(!url){alert("Please paste your Google Sheet URL first.");return;}
+  localStorage.setItem("asean_sheet_url", url);
+  loadData(url);
+}
+
+function downloadTemplate(){
+  const header = "field,Malaysia,Singapore,Indonesia,Thailand,Philippines,Vietnam";
+  const rows = [
+    "month,March 2025,March 2025,March 2025,March 2025,March 2025,March 2025",
+    "sentiment,positive,cautious,positive,cautious,positive,positive",
+    "summary,\"Narrative summary here.\",\"Narrative summary here.\",\"Narrative summary here.\",\"Narrative summary here.\",\"Narrative summary here.\",\"Narrative summary here.\"",
+    "gdp_val,4.4,2.7,5.0,2.3,5.7,6.9",
+    "gdp_chg,+0.3pp,-0.4pp,+0.1pp,+0.1pp,+0.2pp,+0.4pp",
+    "gdp_dir,up,down,up,up,up,up",
+    "gdp_q,yes,yes,yes,yes,yes,yes",
+    "ip_val,3.8,-1.2,4.1,-0.8,5.3,8.2",
+    "ip_chg,+0.5pp,-0.3pp,+0.3pp,-0.4pp,+0.4pp,+0.7pp",
+    "ip_dir,up,down,up,down,up,up",
+    "ip_q,no,no,no,no,no,no",
+    "cpi_val,1.8,2.9,2.5,-0.1,3.4,3.2",
+    "cpi_chg,-0.2pp,-0.2pp,+0.3pp,-0.3pp,-0.3pp,+0.1pp",
+    "cpi_dir,down,down,down,down,down,down",
+    "cpi_q,no,no,no,no,no,no",
+    "rate_val,3.00,3.68,6.25,2.25,5.50,4.50",
+    "rate_chg,unch.,unch.,unch.,-25bps,-25bps,unch.",
+    "rate_dir,flat,flat,flat,down,down,flat",
+    "rate_q,no,no,no,no,no,no",
+    "exports_val,6.2,3.1,4.8,1.4,7.1,14.1",
+    "exports_chg,+1.1pp,-0.8pp,-0.2pp,-0.6pp,+0.9pp,+1.8pp",
+    "exports_dir,up,down,down,down,up,up",
+    "exports_q,no,no,no,no,no,no",
+    "trade_val,+17.2,+4.8,+3.1,+1.4,-4.2,+8.1",
+    "trade_chg,+2.1,-0.5,-0.2,-0.3,+0.1,+1.2",
+    "trade_dir,up,down,down,down,up,up",
+    "trade_q,no,no,no,no,no,no",
+    "fx_val,4.48,1.34,15890,35.2,57.2,25480",
+    "fx_chg,-0.03,-0.01,+120,+0.4,-0.4,+60",
+    "fx_dir,up,up,down,down,up,down",
+    "fx_q,no,no,no,no,no,no",
+    "reserves_val,117,358,140,224,105,88",
+    "reserves_chg,+1.2,+3.0,+0.5,-1.0,+0.8,+0.4",
+    "reserves_dir,up,up,up,down,up,up",
+    "reserves_q,no,no,no,no,no,no",
+    "pmi_val,50.1,48.7,51.2,48.3,52.1,54.3",
+    "pmi_chg,+0.6,-0.3,+0.4,-0.8,+0.5,+1.1",
+    "pmi_dir,up,down,up,down,up,up",
+    "pmi_q,no,no,no,no,no,no",
+    "gdp_trend,4.1|4.0|4.2|4.3|4.1|4.4,2.9|3.1|3.2|3.0|3.1|2.7,4.9|4.9|5.0|5.1|4.9|5.0,2.5|2.4|2.2|2.1|2.2|2.3,5.3|5.4|5.5|5.5|5.5|5.7,6.4|6.5|6.6|6.5|6.5|6.9",
+    "cpi_trend,2.2|2.1|2.0|1.9|2.0|1.8,3.4|3.2|3.1|3.0|3.1|2.9,2.6|2.7|2.8|2.6|2.2|2.5,0.8|0.5|0.2|0.1|0.2|-0.1,3.9|3.8|3.6|3.5|3.7|3.4,3.5|3.4|3.3|3.2|3.1|3.2",
+    "trend_months,Oct|Nov|Dec|Jan|Feb|Mar,Oct|Nov|Dec|Jan|Feb|Mar,Oct|Nov|Dec|Jan|Feb|Mar,Oct|Nov|Dec|Jan|Feb|Mar,Oct|Nov|Dec|Jan|Feb|Mar,Oct|Nov|Dec|Jan|Feb|Mar"
+  ];
+  const csv = [header,...rows].join("\n");
+  const a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.download = "asean_dashboard_template.csv";
+  a.click();
+}
+
+function parseCSV(text){
+  const lines = text.trim().split("\n");
+  const headers = parseCSVLine(lines[0]);
+  const result = {};
+  lines.slice(1).forEach(line=>{
+    const vals = parseCSVLine(line);
+    const field = vals[0];
+    result[field] = {};
+    headers.slice(1).forEach((h,i)=>{ result[field][h.trim()] = (vals[i+1]||"").trim(); });
+  });
+  return result;
+}
+
+function parseCSVLine(line){
+  const result=[];let cur="";let inQ=false;
+  for(let i=0;i<line.length;i++){
+    if(line[i]==='"'){inQ=!inQ;}
+    else if(line[i]===","&&!inQ){result.push(cur);cur="";}
+    else{cur+=line[i];}
+  }
+  result.push(cur);
+  return result;
+}
+
+function loadData(url){
+  document.getElementById("setupScreen").style.display="none";
+  document.getElementById("loadingScreen").style.display="block";
+  fetch(url)
+    .then(r=>{ if(!r.ok) throw new Error("Could not fetch sheet"); return r.text(); })
+    .then(text=>{ processData(parseCSV(text)); })
+    .catch(err=>{
+      document.getElementById("loadingScreen").style.display="none";
+      document.getElementById("setupScreen").style.display="block";
+      document.getElementById("setupScreen").innerHTML = '<div class="error-box"><strong>Could not load data.</strong> Please check your Google Sheet URL and make sure it is published to the web as CSV.<br><br>Error: '+err.message+'<br><br><button onclick="location.reload()" style="margin-top:8px;padding:6px 14px;background:#A32D2D;color:#fff;border:none;border-radius:6px;cursor:pointer">Try again</button></div>' + document.getElementById("setupScreen").innerHTML;
+    });
+}
+
+function processData(raw){
+  DASH_DATA = {};
+  const month = raw["month"] ? raw["month"][COUNTRIES_ORDER[0]] : "—";
+  document.getElementById("monthBadge").textContent = month;
+  document.getElementById("lastUpdated").textContent = "Updated: "+new Date().toLocaleDateString();
+
+  COUNTRIES_ORDER.forEach(name=>{
+    const id = COUNTRY_IDS[name];
+    const hfis = HFI_KEYS.map(k=>({
+      lbl: HFI_LABELS[HFI_KEYS.indexOf(k)],
+      val: raw[k+"_val"]?.[name]||"—",
+      unit: HFI_UNITS[k],
+      chg: raw[k+"_chg"]?.[name]||"",
+      dir: raw[k+"_dir"]?.[name]||"flat",
+      q: raw[k+"_q"]?.[name]==="yes"
+    }));
+    DASH_DATA[id] = {
+      name, id,
+      sentiment: raw["sentiment"]?.[name]||"flat",
+      summary: raw["summary"]?.[name]||"",
+      hfis,
+      gdpTrend: (raw["gdp_trend"]?.[name]||"").split("|").map(Number),
+      cpiTrend: (raw["cpi_trend"]?.[name]||"").split("|").map(Number),
+      trendMonths: (raw["trend_months"]?.[name]||"Oct|Nov|Dec|Jan|Feb|Mar").split("|")
+    };
+  });
+
+  buildTabs();
+  buildOverview();
+  buildHeatmap();
+  COUNTRIES_ORDER.forEach(name=>buildCountryPanel(COUNTRY_IDS[name]));
+
+  document.getElementById("loadingScreen").style.display="none";
+  document.getElementById("mainDash").style.display="block";
+}
+
+function buildTabs(){
+  const nav = document.getElementById("navTabs");
+  nav.innerHTML = '<button class="ntab active" data-panel="overview">Regional overview</button><button class="ntab" data-panel="heatmap">Heatmap</button>';
+  COUNTRIES_ORDER.forEach(name=>{
+    const id = COUNTRY_IDS[name];
+    const btn = document.createElement("button");
+    btn.className="ntab"; btn.dataset.panel=id; btn.textContent=name;
+    nav.appendChild(btn);
+    const panel = document.createElement("div");
+    panel.className="panel"; panel.id="panel-"+id;
+    document.getElementById("mainDash").querySelector(".container").appendChild(panel);
+  });
+  nav.addEventListener("click",e=>{
+    const t=e.target.closest(".ntab");
+    if(t) switchTab(t.dataset.panel);
+  });
+}
+
+function switchTab(id){
+  document.querySelectorAll(".panel").forEach(p=>p.classList.remove("vis"));
+  document.querySelectorAll(".ntab").forEach(t=>t.classList.remove("active"));
+  document.getElementById("panel-"+id).classList.add("vis");
+  document.querySelector(`.ntab[data-panel="${id}"]`).classList.add("active");
+  const ids = Object.values(COUNTRY_IDS);
+  if(ids.includes(id)){
+    setTimeout(()=>renderCharts(id),60);
+  }
+}
+
+function buildOverview(){
+  const g = document.getElementById("ovGrid");
+  g.innerHTML="";
+  COUNTRIES_ORDER.forEach(name=>{
+    const c=DASH_DATA[COUNTRY_IDS[name]];
+    const d=document.createElement("div");
+    d.className="ov-card";
+    d.innerHTML=`<div class="ov-top"><div class="ov-name">${c.name}</div><span class="sent-pill ${sentCls(c.sentiment)}">${sentLbl(c.sentiment)}</span></div>
+    <div class="ov-hfis">${c.hfis.map(h=>`<div class="oh"><div class="oh-lbl">${h.lbl}</div><div class="oh-val">${h.val}<span class="oh-unit"> ${h.unit}</span></div><div class="oh-chg ${dirCls(h.dir)}">${dirArrow(h.dir)}${h.chg}</div></div>`).join("")}</div>
+    <button class="view-btn" onclick="switchTab('${c.id}')">View full detail →</button>`;
+    g.appendChild(d);
+  });
+}
+
+function buildHeatmap(){
+  const g = document.getElementById("hmGrid");
+  const cols = 1 + COUNTRIES_ORDER.length;
+  g.style.cssText=`display:grid;grid-template-columns:130px repeat(${COUNTRIES_ORDER.length},1fr);gap:4px`;
+  let html='<div></div>';
+  COUNTRIES_ORDER.forEach(n=>{ html+=`<div class="hm-head">${n.split(" ")[0]}</div>`; });
+  HFI_LABELS.forEach((lbl,i)=>{
+    html+=`<div class="hm-lbl">${lbl}</div>`;
+    COUNTRIES_ORDER.forEach(name=>{
+      const h=DASH_DATA[COUNTRY_IDS[name]].hfis[i];
+      const cls=h.dir==="up"?"hm-g":h.dir==="down"?"hm-r":"hm-a";
+      html+=`<div class="hm-cell ${cls}">${h.val}</div>`;
+    });
+  });
+  g.innerHTML=html;
+}
+
+function buildCountryPanel(id){
+  const c=DASH_DATA[id];
+  const el=document.getElementById("panel-"+id);
+  el.innerHTML=`
+  <div class="country-layout">
+    <div class="card">
+      <div class="card-top"><div class="card-title" style="margin:0">Monthly narrative</div><span class="sent-pill ${sentCls(c.sentiment)}">${sentLbl(c.sentiment)}</span></div>
+      <div class="summary-text">${c.summary}</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tier 1 indicators</div>
+      <div class="hfi9">${c.hfis.map(h=>`<div class="hc"><div class="hc-lbl">${h.lbl}${h.q?' <span class="q-note">(Q)</span>':''}</div><div class="hc-val">${h.val}<span class="hc-unit"> ${h.unit}</span></div><div class="hc-chg ${dirCls(h.dir)}">${dirArrow(h.dir)}${h.chg}</div></div>`).join("")}</div>
+    </div>
+  </div>
+  <div class="chart-row">
+    <div class="chart-card"><div class="chart-lbl">GDP growth — 6-month trend (%YoY)</div><div class="chart-wrap"><canvas id="gdp-${id}" role="img" aria-label="GDP trend for ${c.name}"></canvas></div></div>
+    <div class="chart-card"><div class="chart-lbl">Headline CPI — 6-month trend (%YoY)</div><div class="chart-wrap"><canvas id="cpi-${id}" role="img" aria-label="CPI trend for ${c.name}"></canvas></div></div>
+  </div>`;
+}
+
+function renderCharts(id){
+  const c=DASH_DATA[id];
+  makeChart("gdp-"+id, c.trendMonths, c.gdpTrend,"#185FA5","rgba(24,95,165,0.08)");
+  makeChart("cpi-"+id, c.trendMonths, c.cpiTrend,"#993C1D","rgba(153,60,29,0.08)");
+}
+
+function makeChart(canvasId, labels, data, color, fill){
+  const ctx=document.getElementById(canvasId);
+  if(!ctx) return;
+  if(activeCharts[canvasId]) activeCharts[canvasId].destroy();
+  activeCharts[canvasId]=new Chart(ctx,{
+    type:"line",
+    data:{labels,datasets:[{data,borderColor:color,backgroundColor:fill,borderWidth:2,pointRadius:3,pointBackgroundColor:color,fill:true,tension:0.35}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${parseFloat(c.parsed.y).toFixed(1)}%`}}},
+      scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{ticks:{font:{size:11},callback:v=>parseFloat(v).toFixed(1)+"%"},grid:{color:"rgba(0,0,0,0.05)"}}}}
+  });
+}
+
+const saved = localStorage.getItem("asean_sheet_url");
+if(saved){ document.getElementById("sheetUrl") && (document.getElementById("sheetUrl").value=saved); loadData(saved); }
+</script>
+</body>
+</html>
